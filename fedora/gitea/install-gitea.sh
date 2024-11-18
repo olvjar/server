@@ -82,8 +82,18 @@ chmod -R 770 "$GITEA_CONFIG"
 
 # Download and install Gitea
 log "[!] Downloading Gitea..."
+ARCH=$(uname -m)
+if [ "$ARCH" == "x86_64" ]; then
+    ARCH="amd64"
+elif [ "$ARCH" == "aarch64" ]; then
+    ARCH="arm64"
+else
+    log "Unsupported architecture: $ARCH"
+    exit 1
+fi
+
 LATEST_VERSION=$(curl -s https://dl.gitea.io/gitea/ | grep -oP 'href="/gitea/\K\d+\.\d+\.\d+' | sort -V | tail -n 1)
-wget -O /usr/local/bin/gitea "https://dl.gitea.io/gitea/${LATEST_VERSION}/gitea-${LATEST_VERSION}-linux-arm64"
+wget -O /usr/local/bin/gitea "https://dl.gitea.io/gitea/${LATEST_VERSION}/gitea-${LATEST_VERSION}-linux-${ARCH}"
 chmod +x /usr/local/bin/gitea
 
 # Create systemd service file for Gitea
