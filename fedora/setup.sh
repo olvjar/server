@@ -44,13 +44,14 @@ install_package() {
 
 # Define packages
 packages=(
-    "neovim" "git" "fish" "tmux" "net-tools" "bat"
-    "nginx" "httpd" "php" "mariadb-server"
+    "neovim" "git" "fish" "tmux" "net-tools" "bat" # init
+    "nginx" "httpd" "php" "mariadb-server" #server-specific
+    "fail2ban" # security
 )
 
 # Define services to enable/start
 services=(
-    "httpd" "mariadb" "nginx"
+    "httpd" "mariadb" "nginx" "sshd"
 )
 
 # Define firewall services
