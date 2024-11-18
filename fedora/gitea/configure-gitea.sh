@@ -48,7 +48,7 @@ install_missing() {
 
 # Install MariaDB and Nginx if not already installed
 log "[!] Checking and installing dependencies..."
-dependencies=("git" "wget" "curl" "tar" "openssl")
+dependencies=("mariadb-server" "nginx")
 for package in "${dependencies[@]}"; do
     install_missing "$package"
 done
@@ -88,11 +88,14 @@ server {
     ssl_certificate_key ${SSL_KEY};
 
     location / {
+        client_max_body_size 512M;
         proxy_pass http://localhost:3000;  # Gitea runs on port 3000 by default
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Connection $http_connection;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 90;
     }
 }
