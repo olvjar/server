@@ -1,24 +1,30 @@
 #!/bin/bash
 
-LOGFILE="/var/log/install_script.log"
-exec > >(tee -a "$LOGFILE") 2>&1
+# logging
+LOG_FILE="/var/log/gitea_install.log"
+exec > >(tee -a "$LOGFILE") 2>&1. # redirect output to both console and log file
 
-if [[ $UID != 0 ]]; then
-    echo "Please run this script with sudo:"
-    echo "sudo $0 $*"
+# function to log messages
+log() {
+    local message="$1"
+    local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+    echo "[$timestamp] $message"
+}
+
+# function to wait for user input
+wait_input() {
+    read -p "[*] Press Enter to continue..."
+}
+
+# exit immediately if a command exits with a non-zero status
+set -e
+
+# check current user permissions
+if [ "$(whoami)" != "root" ]; then
+    log "This script needs to be run as root or with sudo."
+    log "sudo $0 $*"
     exit 1
 fi
-
-# Function to log messages
-log() {
-    echo "$1"
-}
-
-# Function to wait for user input
-wait_for_input() {
-    echo "Press Enter to continue..."
-    read -r
-}
 
 # Function to check and install a package
 install_package() {
@@ -55,14 +61,14 @@ firewall_services=(
 # Update system
 log "[!] Updating system..."
 dnf update -y
-wait_for_input
+wait_input
 
 # Install packages
 log "[!] Installing packages..."
 for pkg in "${packages[@]}"; do
     install_package "$pkg"
 done
-wait_for_input
+wait_input
 
 # Check and install firewalld if not installed
 if ! dnf -q list installed firewalld &>/dev/null; then
@@ -72,7 +78,7 @@ if ! dnf -q list installed firewalld &>/dev/null; then
 else
     log "firewalld is already installed."
 fi
-wait_for_input
+wait_input
 
 # Enable and start necessary services
 log "[!] Enabling and starting services..."
@@ -81,7 +87,7 @@ for service in "${services[@]}"; do
     systemctl start "$service"
 done
 systemctl enable --now firewalld
-wait_for_input
+wait_input
 
 # Allow necessary services through the firewall
 log "[!] Allowing necessary services through the firewall..."
@@ -89,7 +95,7 @@ for fw_service in "${firewall_services[@]}"; do
     firewall-cmd --permanent --add-service="$fw_service"
 done
 firewall-cmd --reload
-wait_for_input
+wait_input
 
 # Set Fish as the default shell
 log "[!] Setting Fish as the default shell for the user..."
@@ -103,15 +109,15 @@ if command -v fish &>/dev/null; then
 else
     log "Fish is not installed. Cannot set as default shell."
 fi
-wait_for_input
+wait_input
 
 # Cleanup unused packages
 log "[!] Cleaning up unused packages..."
 dnf autoremove -y
-wait_for_input
+wait_input
 
 # Clean up
 log "[!] Cleaning up..."
 dnf clean all
 log "[*] Script completed successfully! Press Enter to finish..."
-wait_for_input
+wait_input
