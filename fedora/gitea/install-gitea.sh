@@ -41,6 +41,7 @@ install_missing() {
         log "Installing $package..."
         if dnf install -y "$package"; then
             log "$package installed successfully."
+            wait_input
         else
             log "Failed to install $package. Exiting."
             exit 1
@@ -56,45 +57,52 @@ log "[!] Starting Gitea installation..."
 # Update system and install dependencies
 log "[!] Updating system..."
 dnf update -y
+wait_input
 
 log "[!] Checking and installing dependencies..."
-dependencies=("git" "wget" "curl" "tar" "openssl")
+dependencies=("git" "curl" "tar" "openssl")
 for package in "${dependencies[@]}"; do
     install_missing "$package"
 done
 
 # Create Gitea user
 log "[!] Creating Gitea user..."
-if id "$GITEA_USER" &>/dev/null; then
-    log "Gitea user already exists."
-else
-    useradd --system --shell /bin/bash --user-group --home-dir /home/gitea "$GITEA_USER"
+if ! id "$GITEA_USER" &>/dev/null; then
+    useradd --system --shell /bin/bash --user-group --home-dir /home/gitea "$GITEA_USER" || { log "Failed to create Gitea user. Exiting."; exit 1; }
     log "Gitea user created."
+else
+    log "Gitea user already exists."
 fi
+wait_input
 
 # Set up Gitea directories and permissions
 log "[!] Setting up user directories..."
 mkdir -p "$GITEA_DIR"/{custom,data,log} "$GITEA_CONFIG"
 chown -R "$GITEA_USER:$GITEA_USER" "$GITEA_DIR"
-chown -R root:"$GITEA_USER" "$GITEA_CONFIG"
 chmod -R 750 "$GITEA_DIR"
+chown -R root:"$GITEA_USER" "$GITEA_CONFIG"
 chmod -R 770 "$GITEA_CONFIG"
+wait_input
 
 # Download and install Gitea
 log "[!] Downloading Gitea..."
 ARCH=$(uname -m)
-if [ "$ARCH" == "x86_64" ]; then
-    ARCH="amd64"
-elif [ "$ARCH" == "aarch64" ]; then
-    ARCH="arm64"
-else
-    log "Unsupported architecture: $ARCH"
+case "$ARCH" in
+    x86_64) ARCH="amd64" ;;
+    aarch64) ARCH="arm64" ;;
+    *) log "Unsupported architecture: $ARCH"; exit 1 ;;
+esac
+
+LATEST_VERSION=$(curl -s https://dl.gitea.io/gitea/ | grep -oP 'href="/gitea/\K\d+\.\d+\.\d+' | sort -V | tail -n 1)
+if [ -z "$LATEST_VERSION" ]; then
+    log "Failed to determine the latest Gitea version. Exiting."
     exit 1
 fi
 
-LATEST_VERSION=$(curl -s https://dl.gitea.io/gitea/ | grep -oP 'href="/gitea/\K\d+\.\d+\.\d+' | sort -V | tail -n 1)
-wget -O /usr/local/bin/gitea "https://dl.gitea.io/gitea/${LATEST_VERSION}/gitea-${LATEST_VERSION}-linux-${ARCH}"
-chmod +x /usr/local/bin/gitea
+curl -L -o "$GITEA_BINARY" "https://dl.gitea.io/gitea/${LATEST_VERSION}/gitea-${LATEST_VERSION}-linux-${ARCH}" || { log "Failed to download Gitea. Exiting."; exit 1; }
+chmod +x "$GITEA_BINARY"
+log "[!] Gitea successfully installed"
+wait_input
 
 # Create systemd service file for Gitea
 log "[!] Setting up Gitea service..."
@@ -102,8 +110,11 @@ cat <<EOF >/etc/systemd/system/gitea.service
 [Unit]
 Description=Gitea (Git with a cup of tea)
 After=network.target
+After=syslog.target
+After=mariadb.service mysqld.service
 
 [Service]
+RestartSec=2s
 Type=simple
 User=$GITEA_USER
 Group=$GITEA_USER
@@ -118,9 +129,10 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE
 WantedBy=multi-user.target
 EOF
 
+
 # Reload systemd, enable and start Gitea
 systemctl daemon-reload
-systemctl enable --now gitea
+systemctl enable --now gitea || { log "Failed to start Gitea service. Exiting."; exit 1; }
 systemctl start gitea
 
 log "[!] Gitea installation completed! Proceed with database and Nginx configuration."
