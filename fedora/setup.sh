@@ -9,109 +9,109 @@ if [[ $UID != 0 ]]; then
     exit 1
 fi
 
+# Function to log messages
+log() {
+    echo "$1"
+}
+
+# Function to wait for user input
+wait_for_input() {
+    echo "Press Enter to continue..."
+    read -r
+}
+
 # Function to check and install a package
 install_package() {
     local pkg=$1
     if ! dnf -q list installed "$pkg" &>/dev/null; then
-        echo "Installing $pkg..."
-        if ! dnf install -y "$pkg"; then
-            echo "Failed to install $pkg. Exiting."
+        log "Installing $pkg..."
+        if dnf install -y "$pkg"; then
+            log "$pkg installed successfully."
+        else
+            log "Failed to install $pkg. Exiting."
             exit 1
         fi
     else
-        echo "$pkg is already installed."
+        log "$pkg is already installed."
     fi
 }
 
-# Define initial packages
-initpackages=(
+# Define packages
+packages=(
     "neovim" "git" "fish" "tmux" "net-tools" "bat"
+    "nginx" "httpd" "php" "mariadb-server"
 )
 
-# Define server-specific packages
-serverpackages=(
-    "nginx" "httpd" "php" "mariadb-server"
-    # "sqlite"  # Uncomment if you want to install SQLite
+# Define services to enable/start
+services=(
+    "httpd" "mariadb" "nginx"
+)
+
+# Define firewall services
+firewall_services=(
+    "ssh" "http" "https" "mysql" "cockpit"
 )
 
 # Update system
-echo "[!] Updating system..."
+log "[!] Updating system..."
 dnf update -y
-echo "[*] System updated. Press Enter to continue..."
-read -r
+wait_for_input
 
-# Install initial packages
-echo "[!] Installing initial packages..."
-for pkg in "${initpackages[@]}"; do
+# Install packages
+log "[!] Installing packages..."
+for pkg in "${packages[@]}"; do
     install_package "$pkg"
 done
-echo "[*] Initial packages installed. Press Enter to continue..."
-read -r
-
-# Install server-specific packages
-echo "[!] Installing server-specific packages..."
-for pkg in "${serverpackages[@]}"; do
-    install_package "$pkg"
-done
-echo "[*] Server-specific packages installed. Press Enter to continue..."
-read -r
+wait_for_input
 
 # Check and install firewalld if not installed
-echo "[!] Configuring firewall..."
 if ! dnf -q list installed firewalld &>/dev/null; then
-    echo "Installing firewalld..."
+    log "Installing firewalld..."
     dnf install -y firewalld
+    log "firewalld installed successfully."
 else
-    echo "firewalld is already installed."
+    log "firewalld is already installed."
 fi
-echo "[*] Firewall configured. Press Enter to continue..."
-read -r
+wait_for_input
 
 # Enable and start necessary services
-echo "[!] Enabling and starting services..."
-systemctl enable httpd
-systemctl start httpd
-systemctl enable mariadb
-systemctl start mariadb
-systemctl enable nginx
-systemctl start nginx
+log "[!] Enabling and starting services..."
+for service in "${services[@]}"; do
+    systemctl enable "$service"
+    systemctl start "$service"
+done
 systemctl enable --now firewalld
-echo "[*] Services enabled and started. Press Enter to continue..."
-read -r
+wait_for_input
 
-# Allow SSH and other necessary services through the firewall
-echo "[!] Allowing necessary services through the firewall..."
-firewall-cmd --permanent --add-service=ssh
-firewall-cmd --permanent --add-service=http
-firewall-cmd --permanent --add-service=https
-firewall-cmd --permanent --add-service=mysql
+# Allow necessary services through the firewall
+log "[!] Allowing necessary services through the firewall..."
+for fw_service in "${firewall_services[@]}"; do
+    firewall-cmd --permanent --add-service="$fw_service"
+done
 firewall-cmd --reload
-echo "[*] Firewall rules updated. Press Enter to continue..."
-read -r
+wait_for_input
 
 # Set Fish as the default shell
-echo "[!] Setting Fish as the default shell for the user..."
+log "[!] Setting Fish as the default shell for the user..."
 if command -v fish &>/dev/null; then
     chsh -s "$(command -v fish)"
     if [[ $? -eq 0 ]]; then
-        echo "Fish has been set as the default shell."
+        log "Fish has been set as the default shell."
     else
-        echo "Failed to set Fish as the default shell. You may need to log out and log back in."
+        log "Failed to set Fish as the default shell. You may need to log out and log back in."
     fi
 else
-    echo "Fish is not installed. Cannot set as default shell."
+    log "Fish is not installed. Cannot set as default shell."
 fi
-echo "[*] Shell configuration completed. Press Enter to continue..."
-read -r
+wait_for_input
 
 # Cleanup unused packages
-echo "[!] Cleaning up unused packages..."
+log "[!] Cleaning up unused packages..."
 dnf autoremove -y
-echo "[*] Unused packages removed. Press Enter to continue..."
-read -r
+wait_for_input
 
 # Clean up
-echo "[!] Cleaning up..."
+log "[!] Cleaning up..."
 dnf clean all
-echo "[*] Script completed successfully! Press Enter to finish..."
-read -r
+log "[*] Script completed successfully! Press Enter to finish..."
+wait_for_input
