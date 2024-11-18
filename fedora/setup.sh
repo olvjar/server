@@ -37,18 +37,24 @@ serverpackages=(
 # Update system
 echo "[!] Updating system..."
 dnf update -y
+echo "[*] System updated. Press Enter to continue..."
+read -r
 
 # Install initial packages
 echo "[!] Installing initial packages..."
 for pkg in "${initpackages[@]}"; do
     install_package "$pkg"
 done
+echo "[*] Initial packages installed. Press Enter to continue..."
+read -r
 
 # Install server-specific packages
 echo "[!] Installing server-specific packages..."
 for pkg in "${serverpackages[@]}"; do
     install_package "$pkg"
 done
+echo "[*] Server-specific packages installed. Press Enter to continue..."
+read -r
 
 # Check and install firewalld if not installed
 echo "[!] Configuring firewall..."
@@ -58,6 +64,8 @@ if ! dnf -q list installed firewalld &>/dev/null; then
 else
     echo "firewalld is already installed."
 fi
+echo "[*] Firewall configured. Press Enter to continue..."
+read -r
 
 # Enable and start necessary services
 echo "[!] Enabling and starting services..."
@@ -68,13 +76,18 @@ systemctl start mariadb
 systemctl enable nginx
 systemctl start nginx
 systemctl enable --now firewalld
+echo "[*] Services enabled and started. Press Enter to continue..."
+read -r
 
 # Allow SSH and other necessary services through the firewall
+echo "[!] Allowing necessary services through the firewall..."
 firewall-cmd --permanent --add-service=ssh
 firewall-cmd --permanent --add-service=http
 firewall-cmd --permanent --add-service=https
 firewall-cmd --permanent --add-service=mysql
 firewall-cmd --reload
+echo "[*] Firewall rules updated. Press Enter to continue..."
+read -r
 
 # Set Fish as the default shell
 echo "[!] Setting Fish as the default shell for the user..."
@@ -88,13 +101,17 @@ if command -v fish &>/dev/null; then
 else
     echo "Fish is not installed. Cannot set as default shell."
 fi
+echo "[*] Shell configuration completed. Press Enter to continue..."
+read -r
 
 # Cleanup unused packages
 echo "[!] Cleaning up unused packages..."
 dnf autoremove -y
+echo "[*] Unused packages removed. Press Enter to continue..."
+read -r
 
 # Clean up
 echo "[!] Cleaning up..."
 dnf clean all
-
-echo "[!] Post-installation script completed successfully!"
+echo "[*] Script completed successfully! Press Enter to finish..."
+read -r
