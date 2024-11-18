@@ -25,7 +25,7 @@ install_package() {
 
 # Define initial packages
 initpackages=(
-    "neovim" "git" "fish" "byobu" "net-tools" "bat"
+    "neovim" "git" "fish" "tmux" "net-tools" "bat"
 )
 
 # Define server-specific packages
