@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # logging
-LOG_FILE="/var/log/gitea_install.log"
+LOG_FILE="/var/log/setup_install.log"
 exec > >(tee -a "$LOGFILE") 2>&1. # redirect output to both console and log file
 
 # function to log messages
@@ -51,7 +51,7 @@ packages=(
 
 # Define services to enable/start
 services=(
-    "httpd" "mariadb" "nginx" "sshd"
+    "httpd" "mariadb" "sshd"
 )
 
 # Define firewall services
