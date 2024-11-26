@@ -4,6 +4,7 @@
 # This script will install and configure Gitea on Fedora, ensuring all dependencies are installed and setup correctly.
 
 LOG_FILE="/var/log/gitea_install.log"
+touch "$LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1  # Redirect output to both console and log file
 
 # Function to log messages with timestamp

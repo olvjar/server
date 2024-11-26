@@ -4,6 +4,7 @@
 # This script will remove Gitea and its configurations from the system.
 
 LOG_FILE="/var/log/gitea_uninstall.log"
+touch "$LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1  # Redirect output to both console and log file
 
 # Function to log messages with timestamp

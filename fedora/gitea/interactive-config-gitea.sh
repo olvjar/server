@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# ... existing logging setup code ...
+LOG_FILE="/var/log/gitea_configure.log"
+touch "$LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1 
 
 # Function to prompt for input with default value
 prompt_with_default() {
