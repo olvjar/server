@@ -2,7 +2,12 @@
 
 # logging
 LOG_FILE="/var/log/setup_install.log"
-exec > >(tee -a "$LOGFILE") 2>&1. # redirect output to both console and log file
+
+# Create log file if it doesn't exist
+touch "$LOG_FILE"
+
+# Redirect output to both console and log file
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 # function to log messages
 log() {
@@ -68,8 +73,8 @@ wait_input
 log "[!] Installing packages..."
 for pkg in "${packages[@]}"; do
     install_package "$pkg"
+    wait_input
 done
-wait_input
 
 # Check and install firewalld if not installed
 if ! dnf -q list installed firewalld &>/dev/null; then
@@ -120,5 +125,5 @@ wait_input
 # Clean up
 log "[!] Cleaning up..."
 dnf clean all
-log "[*] Script completed successfully! Press Enter to finish..."
+log "[*] Script completed successfully!..."
 wait_input
